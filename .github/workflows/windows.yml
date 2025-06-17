@@ -1,0 +1,10 @@
+name: Windows_VPS
+on: 
+    workflow_dispatch:
+jobs:
+    launch-shell:
+        runs-on: windows
+        steps:
+            - name: Checkout Repo
+              uses: actions/checkout@v4
+              

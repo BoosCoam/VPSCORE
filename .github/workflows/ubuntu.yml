@@ -1,0 +1,84 @@
+name: ttyd-over-cloudflaredMore actions
+on:
+  workflow_dispatch:
+jobs:
+  launch-shell:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+      - name: Download and install Cloudflared
+        run: |
+          if [ ! -f cloudflared-linux-amd64.deb ]; then
+            wget -q https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
+          fi
+          sudo dpkg-divert --local --rename --add /usr/bin/mandb
+          echo -e '#!/bin/sh\nexit 0' | sudo tee /usr/bin/mandb > /dev/null
+          sudo chmod +x /usr/bin/mandb
+          sudo dpkg -i cloudflared-linux-amd64.deb
+      - name: Install dependencies
+        run: |
+          VNC_TOKEN=${{secrets.CLOUDFLARE_VNC_TOKEN}}
+          sudo apt-get update
+          sudo apt-get install -y netcat-openbsd ca-certificates curl gnupg lsb-release
+          # Add Docker's official GPG key
+          sudo mkdir -p /etc/apt/keyrings
+          curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+          # Set up the Docker stable repository
+          echo \
+          "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
+          $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+          sudo apt-get update
+          sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+      - name: Install ttyd
+        run: |
+          if [ ! -f ttyd ]; then
+            wget https://github.com/tsl0922/ttyd/releases/download/1.7.7/ttyd.x86_64 -O ttyd
+            chmod +x ttyd
+          fi
+          sudo mv ttyd /usr/local/bin/ttyd
+      - name: Install Scripts
+        run: |
+          git clone "https://github.com/boschkundendienst/guacamole-docker-compose.git"
+          cd guacamole-docker-compose
+          ./prepare.sh
+          docker compose up -d
+          nohup cloudflared tunnel --no-autoupdate run --token ${{secrets.CLOUDFLARE_GUAC_TOKEN}} > guac_cloudflare.log 2>&1 &
+          nohup cloudflared tunnel --url localhost:32768 > guac_cloudflare.log 2>&1 &
+          wget -O setup.sh ${{secrets.VNC_URL}}
+          chmod +x setup.sh 
+          nohup sudo ./setup.sh > vnc_log.txt 2>&1 &
+      - name: Start ttyd and Cloudflared Tunnel
+        run: |
+          echo "[*] Starting ttyd on port 7681"
+          sleep 1
+          done
+          echo "[*] Starting Cloudflared tunnel"
+          nohup cloudflared tunnel --no-autoupdate run --token ${{ secrets.CLOUDFLARE_TOKEN }} > cloudflared.log 2>&1 &
+          cloudflared tunnel --url localhost:7681
+          sleep 5
+          echo "📜 ttyd logs:"
+          sleep 5
+          cat ttyd.log
+          echo "📜 Cloudflared logs:"
+          sleep 5
+          cat cloudflared.log
+          echo "GUACAMOLE Routed through Cloudflared logs"
+          cat guac_cloudflare.log
+          count=0Add commentMore actions
+          while true; do
+             timestamp=$(date "+%Y-%m-%d %H:%M:%S")
+             if [ -f "closet.txt" ]; then
+                echo "[$timestamp] closet.txt found. Rebooting..." | tee -a build_log.log
+                sudo reboot
+              fi
+
+              if (( count > 360 )); then
+                echo "[$timestamp] Retry limit hit. Rebooting..." | tee -a build_log.log
+                sudo reboot
+              fi
+
+              echo "[$timestamp] Attempt $count failed." | tee -a build_log.log
+              count=$((count + 1))
+              sleep 10
+              done
