@@ -54,7 +54,6 @@ jobs:
           sleep 1
           echo "[*] Starting Cloudflared tunnel"
           nohup cloudflared tunnel --no-autoupdate run --token ${{ secrets.CLOUDFLARE_TOKEN }} > cloudflared.log 2>&1 &
-          cloudflared tunnel --url localhost:7681
           sleep 5
           echo "📜 ttyd logs:"
           sleep 5
