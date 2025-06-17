@@ -52,7 +52,6 @@ jobs:
         run: |
           echo "[*] Starting ttyd on port 7681"
           sleep 1
-          done
           echo "[*] Starting Cloudflared tunnel"
           nohup cloudflared tunnel --no-autoupdate run --token ${{ secrets.CLOUDFLARE_TOKEN }} > cloudflared.log 2>&1 &
           cloudflared tunnel --url localhost:7681
