@@ -67,9 +67,7 @@ jobs:
           echo "📜 Cloudflared logs:"
           sleep 5
           cat cloudflared.log
-          echo "GUACAMOLE Routed through Cloudflared logs"
-          cat guac_cloudflare.log
-          count=0Add commentMore actions
+          count=0
           while true; do
              timestamp=$(date "+%Y-%m-%d %H:%M:%S")
              if [ -f "closet.txt" ]; then
