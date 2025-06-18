@@ -1,4 +1,4 @@
-name: ttyd-over-cloudflaredMore actions
+name: ttyd-over-cloudflared
 on:
   workflow_dispatch:
 jobs:
@@ -52,21 +52,30 @@ jobs:
         run: |
           echo "[*] Starting ttyd on port 7681"
           sleep 1
-          nohup ttyd -p 7681 --writeable bash> ttyd.log 2>&1 &
+          # Start ttyd with proper terminal initialization and client-optimized settings
+          nohup ttyd -p 7681 -t fontSize=14 -t fontFamily="Courier New" -t titleFixed="Cloud Shell" -t disableLeaveAlert=true bash > ttyd.log 2>&1 &
+          
+          # Wait for ttyd to start properly
           for i in {1..10}; do
-            nc -z localhost 7681 && echo "ttyd is up!"
-            echo "Waiting for ttyd to start"
-            sleep 1
+            if nc -z localhost 7681; then
+              echo "ttyd is up and running!"
+              break
+            fi
+            echo "Waiting for ttyd to start..."
+            sleep 2
           done
+          
           echo "[*] Starting Cloudflared tunnel"
           nohup cloudflared tunnel --no-autoupdate run --token ${{ secrets.CLOUDFLARE_TOKEN }} > cloudflared.log 2>&1 &
-          sleep 5
+          
+          # Give services time to initialize
+          sleep 10
+          
           echo "📜 ttyd logs:"
-          sleep 5
           cat ttyd.log
           echo "📜 Cloudflared logs:"
-          sleep 5
           cat cloudflared.log
+          
           count=0
           while true; do
              timestamp=$(date "+%Y-%m-%d %H:%M:%S")
@@ -74,13 +83,11 @@ jobs:
                 echo "[$timestamp] closet.txt found. Rebooting..." | tee -a build_log.log
                 sudo reboot
               fi
-
               if (( count > 360 )); then
                 echo "[$timestamp] Retry limit hit. Rebooting..." | tee -a build_log.log
                 sudo reboot
               fi
-
-              echo "[$timestamp] Attempt $count failed." | tee -a build_log.log
+              echo "[$timestamp] Running... Attempt $count" | tee -a build_log.log
               count=$((count + 1))
               sleep 10
-              done
+          done
