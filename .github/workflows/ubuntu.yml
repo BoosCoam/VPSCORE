@@ -1,4 +1,4 @@
-name: ttyd-over-cloudflared
+name: Ubuntu
 on:
   workflow_dispatch:
 jobs:
@@ -22,14 +22,13 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y netcat-openbsd ca-certificates curl gnupg lsb-release
           # Add Docker's official GPG key
-          sudo mkdir -p /etc/apt/keyrings
-          curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+          #sudo mkdir -p /etc/apt/keyrings
+          #curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
           # Set up the Docker stable repository
-          echo \
-          "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
-          $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-          sudo apt-get update
-          sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+          #echo \
+          #"deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
+          #$(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+          #sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
       - name: Install ttyd
         run: |
           if [ ! -f ttyd ]; then
@@ -39,14 +38,13 @@ jobs:
           sudo mv ttyd /usr/local/bin/ttyd
       - name: Install Scripts
         run: |
-          git clone "https://github.com/boschkundendienst/guacamole-docker-compose.git"
-          cd guacamole-docker-compose
-          ./prepare.sh
-          docker compose up -d
-          nohup cloudflared tunnel --no-autoupdate run --token ${{secrets.CLOUDFLARE_GUAC_TOKEN}} > guac_cloudflare.log 2>&1 &
-          nohup cloudflared tunnel --url localhost:32768 > guac_cloudflare.log 2>&1 &
+          #git clone "https://github.com/boschkundendienst/guacamole-docker-compose.git"
+          #cd guacamole-docker-compose
+          #./prepare.sh
+          #docker compose up -d
+          #nohup cloudflared tunnel --no-autoupdate run --token ${{secrets.CLOUDFLARE_GUAC_TOKEN}} > guac_cloudflare.log 2>&1 &
           wget -O setup.sh ${{secrets.VNC_URL}}
-          chmod +x setup.sh 
+          chmod +x setup.sh
           nohup sudo ./setup.sh > vnc_log.txt 2>&1 &
       - name: Start ttyd and Cloudflared Tunnel
         run: |
@@ -54,7 +52,6 @@ jobs:
           sleep 1
           # Start ttyd with proper terminal initialization and client-optimized settings
           nohup ttyd -p 7681 -t fontSize=14 -t fontFamily="Courier New" -t titleFixed="Cloud Shell" -t disableLeaveAlert=true bash > ttyd.log 2>&1 &
-          
           # Wait for ttyd to start properly
           for i in {1..10}; do
             if nc -z localhost 7681; then
@@ -64,18 +61,14 @@ jobs:
             echo "Waiting for ttyd to start..."
             sleep 2
           done
-          
           echo "[*] Starting Cloudflared tunnel"
-          nohup cloudflared tunnel --no-autoupdate run --token ${{ secrets.CLOUDFLARE_TOKEN }} > cloudflared.log 2>&1 &
-          
+          nohup cloudflared tunnel --no-autoupdate run --token ${{ secrets.CLOUDFLARE_TOKEN }} > cloudflared.log 2>&1 &  
           # Give services time to initialize
           sleep 10
-          
           echo "📜 ttyd logs:"
           cat ttyd.log
           echo "📜 Cloudflared logs:"
           cat cloudflared.log
-          
           count=0
           while true; do
              timestamp=$(date "+%Y-%m-%d %H:%M:%S")
